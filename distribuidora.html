@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cadastrar Distribuidora</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"/>
+    <style>
+      .Distb {
+        margin: auto;
+        width: 50%;
+        padding: 10px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="Distb">
+      <h2>Cadastrar distribuidora</h2>
+      <br>
+      
+      <form id="distbForm">
+        <div>
+          <input type="number" class="form-control" id="id_distb" placeholder="ID" required />
+        </div><br>
+        <div>
+          <input type="text" class="form-control" id="nome" placeholder="Nome" required />
+        </div><br>
+        <div>
+          <input type="text" class="form-control" id="endereco" placeholder="Endereço" required />
+        </div><br>
+        <div>
+          <input type="number" class="form-control" id="cnpj" placeholder="CNPJ" required />
+        </div><br>
+        <button type="submit" class="btn btn-primary">Cadastrar</button>
+        <button type="button" class="btn btn-primary" id="btncancel" style="display: none">Cancelar</button>
+        <p></p>
+        <a href="./index.html">Voltar</a>
+        <p></p>
+      </form>
+
+      <!-- Tabela para mostrar as disdistribuidoras cadastradas -->
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Endereço</th>
+            <th>CNPJ</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="distbTable"></tbody>
+      </table>
+      <script>
+        // Array para armazenar distribuidoras do servidor
+        let distbs = [];
+
+        // ID da distribuidora em edição
+        let distbEdit = null;
+
+        // Função para exibir distribuidoras na tabela
+        function mostrarDistribuidoras() {
+          const tab = document.getElementById("distbTable");
+          tab.innerHTML = "";
+          distbs.forEach((distb) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+        <td>${distb.id_distb}</td>
+        <td>${distb.nome}</td>
+        <td>${distb.endereco}</td>
+        <td>${distb.cnpj}</td>
+        <td>
+            <button class="btn btn-primary" onclick="editarDistb(${distb.id_distb})">Editar</button>
+            <button class="btn btn-danger" onclick="deletarDistb(${distb.id_distb})">Deletar</button>
+        </td>
+        `;
+            tab.appendChild(row);
+          });
+        }
+
+        // Função para carregar uma distribuidoras
+        function editarDistb(id_distb) {
+          distbEdit = id_distb;
+          const distb = distbs.find((n) => n.id_distb === id_distb);
+          document.getElementById("id_distb").value = distb.id_distb;
+          document.getElementById("nome").value = distb.nome;
+          document.getElementById("endereco").value = distb.endereco;
+          document.getElementById("cnpj").value = distb.cnpj;
+          // Mostra o botão cancelar enquanto edita
+          document.getElementById("btncancel").style.display = "inline-block";
+        }
+
+        // Função para remover distribuidora
+        function deletarDistb(id_distb) {
+          fetch("http://localhost:3000/distribuidoras/" + id_distb, {
+            method: "DELETE",
+          }).then(() => {
+              distbs = distbs.filter((n) => n.id_distb !== id_distb);
+              mostrarDistribuidoras();
+            }).catch((error) => console.error("Error:", error));
+        }
+
+        // Envio do formulário
+        document.getElementById("distbForm").addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            // Pega os valores do fomulario
+            const distb = {
+              id_distb: parseInt(document.getElementById("id_distb").value),
+              nome: document.getElementById("nome").value,
+              endereco: document.getElementById("endereco").value,
+              cnpj: parseInt(document.getElementById("cnpj").value),
+            };
+
+            const idUsado = distbs.some(
+              (n) => n.id_distb === distb.id_distb
+            );
+            console.log(idUsado, distbEdit);
+            if (idUsado && distbEdit === null) {
+              alert("O ID inserido já existe, digite outro");
+              return;
+            }
+
+            if (distbEdit) {
+              // Editando
+              fetch("http://localhost:3000/distribuidoras/" + distbEdit, {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(distb),
+              }).then((response) => response.json()).then((data) => {
+                  const index = distbs.findIndex((n) => n.id_distb === distbEdit);
+                  distbs[index] = data;
+                  mostrarDistribuidoras();
+                  // Limpa o formulário 
+                  document.getElementById("distbForm").reset();
+                  distbEdit = null;
+                  document.getElementById("btncancel").style.display = "none";
+                }).catch((error) => console.error("Error:", error));
+            } else {
+              // Nova distribuidora
+              console.log("New Distribuidora Data:", distb);
+              fetch("http://localhost:3000/distribuidoras", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(distb),
+              }).then((response) => response.json()).then((data) => {
+                  distbs.push(distb);
+                  location.reload();
+                  console.log("data:" + JSON.stringify(data, null, 2));
+                  console.log("distb:" + JSON.stringify(distb, null, 2));
+                  console.log("distbs:" + JSON.stringify(distbs, null, 2)
+                  );
+                  mostrarDistribuidoras();
+                  document.getElementById("distbForm").reset();
+                  carregarPagina();
+                }).catch((error) => console.error("Error:", error));
+            }
+            mostrarDistribuidoras();
+            carregarPagina();
+          });
+        // Cancela a edição 
+        document.getElementById("btncancel").addEventListener("click", function () {
+            distbEdit = null;
+            document.getElementById("distbForm").reset();
+            this.style.display = "none";
+          });
+        // Carrega as distribuidoras do servidor
+        function carregarPagina() {
+          fetch("http://localhost:3000/distribuidoras").then((response) => response.json()).then((data) => {
+              distbs = data;
+              mostrarDistribuidoras();
+            }).catch((error) => console.error("Error:", error));
+        }
+        carregarPagina(); 
+      </script>
+    </div>
+  </body>
+</html>

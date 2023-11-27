@@ -1,0 +1,65 @@
+*{
+
+    padding: 0;
+    margin: 0;
+}
+body{
+    font-family: arial;
+    background: url("imgfundo.png");
+    background-size: 100%;
+}
+
+ul{
+    list-style: none;
+    width: 90%;
+    margin: auto;
+
+    
+}
+a{
+    text-decoration: none;
+    color: black;
+    display: inline-block;
+    padding: 0px 100px;
+     
+}
+ul li a:hover{
+    background-color: rgb(37, 116, 227);
+    color: white;
+    
+
+
+
+}
+header{
+    background-color: white;
+    height: 90px;
+    text-align: center;
+    position: absolute;
+    width: 100%;
+}
+ 
+li{
+
+    line-height: 90px;
+    float: left;
+
+}
+
+img{ 
+    text-align: left;
+    float: left;
+    width: 200px;
+}
+
+footer{
+    background-color: white;
+    height: 90px;
+    position: absolute;
+    align-items: center;
+    bottom: 0;
+    width: 100%;
+    text-align: center;
+    line-height: 90px;
+
+}

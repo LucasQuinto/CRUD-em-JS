@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cadastrar Funcionários</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <style>
+      .Funcs {
+        margin: auto;
+        width: 50%;
+        padding: 10px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="Funcs">
+      <h2>Cadastrar funcionários</h2>
+      <br>
+
+      <form id="funcForm">
+        <div>
+          <input type="number" class="form-control" id="id_func" placeholder="ID" required />
+        </div><br>
+        <div>
+          <input type="text" class="form-control" id="nome" placeholder="Nome" required />
+        </div><br>
+        <div>
+          <input type="number" class="form-control" id="cpf" placeholder="CPF" required />
+        </div><br>
+        <button type="submit" class="btn btn-primary">Cadastrar</button>
+        <button type="button" class="btn btn-primary" id="btncancel" style="display: none">Cancelar</button>
+        <p></p>
+        <a href="./index.html">Voltar</a>
+        <p></p>
+      </form>
+
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>CPF</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="funcsTable"></tbody>
+      </table>
+      <script>
+        // Array para armazenar funcionarios do servidor
+        let funcs = [];
+
+        // ID do funcionario em edição
+        let funcEdit = null;
+
+        // Função para exibir os funcionarios na tabela
+        function mostrarFuncs() {
+          const tab = document.getElementById("funcsTable");
+          tab.innerHTML = "";
+          funcs.forEach((func) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+        <td>${func.id_func}</td>
+        <td>${func.nome}</td>
+        <td>${func.cpf}</td>
+        <td>
+            <button class="btn btn-primary" onclick="editarFunc(${func.id_func})">Editar</button>
+            <button class="btn btn-danger" onclick="deletarFunc(${func.id_func})">Deletar</button>
+        </td>
+        `;
+            tab.appendChild(row);
+          });
+        }
+
+        // Função para editar um funcionario
+        function editarFunc(id_func) {
+          funcEdit = id_func;
+          const func = funcs.find((n) => n.id_func === id_func);
+          document.getElementById("id_func").value = func.id_func;
+          document.getElementById("nome").value = func.nome;
+          document.getElementById("cpf").value = func.cpf;
+          // Botão de cancelar enquanto edita
+          document.getElementById("btncancel").style.display = "inline-block";
+        }
+
+        // Função para remover funcionario
+        function deletarFunc(id_func) {
+          fetch("http://localhost:3000/funcs/" + id_func, {
+            method: "DELETE",
+          }).then(() => {
+              funcs = funcs.filter((n) => n.id_func !== id_func);
+              mostrarFuncs();
+            }).catch((error) => console.error("Error:", error));
+        }
+
+        // Envio do formulario
+        document.getElementById("funcForm").addEventListener("submit", function (event) {
+            event.preventDefault();
+            // Pega os valores do fomulario
+            const func = {
+              id_func: parseInt(document.getElementById("id_func").value),
+              nome: document.getElementById("nome").value,
+              cpf: parseInt(document.getElementById("cpf").value),
+            };
+
+            const idUsado = funcs.some((n) => n.id_func === func.id_func);
+            if (idUsado && funcEdit === null) {
+              alert("O ID inserido já existe, digite outro");
+              return;
+            }
+
+            if (funcEdit) {
+              // Editando
+              fetch("http://localhost:3000/funcs/" + funcEdit, {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(func),
+              }).then((response) => response.json()).then((data) => {
+                  const index = funcs.findIndex((n) => n.id_func === funcEdit);
+                  funcs[index] = data;
+                  mostrarFuncs();
+
+                  // Limpa o formulário 
+                  document.getElementById("funcForm").reset();
+                  funcEdit = null;
+                  document.getElementById("btncancel").style.display = "none";
+                }).catch((error) => console.error("Error:", error));
+            } else {
+              // Novo funcionarios
+              console.log("New Funcionario Data:", func);
+              fetch("http://localhost:3000/funcs", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(func),
+              }).then((response) => response.json()).then((data) => {
+                  funcs.push(func);
+                  location.reload();
+                  console.log("data:" + JSON.stringify(data, null, 2));
+                  console.log("func:" + JSON.stringify(func, null, 2));
+                  console.log("funcs:" + JSON.stringify(funcs, null, 2));
+                  mostrarFuncs();
+                  document.getElementById("funcForm").reset();
+                  carregarPagina();
+                })
+                .catch((error) => console.error("Error:", error));
+            }
+            mostrarFuncs();
+            carregarPagina();
+          });
+
+        // Cancela a edição 
+        document.getElementById("btncancel").addEventListener("click", function () {
+            funcEdit = null;
+            document.getElementById("funcForm").reset();
+            this.style.display = "none";
+          });
+
+        // Carrega os funcionarios do servidor
+        function carregarPagina() {
+          fetch("http://localhost:3000/funcs").then((response) => response.json()).then((data) => {
+              funcs = data;
+              mostrarFuncs();
+            }).catch((error) => console.error("Error:", error));
+        }
+        carregarPagina(); 
+      </script>
+    </div>
+  </body>
+</html>

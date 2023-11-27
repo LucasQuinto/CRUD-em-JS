@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cadastrar Carro</title>
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <style>
+      .carros {
+        margin: auto;
+        width: 50%;
+        padding: 10px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+  
+  <div class="carros">
+    <h2>Cadastrar Carros</h2>
+    <br>
+
+    <form id="carrosForm" >
+      <div>
+        <input type="number" class="form-control" id="id_carro" placeholder="ID" required />
+      </div><br>
+      <div>
+        <input type="text" class="form-control" id="nome" placeholder="Nome" required />
+      </div><br>
+      <div>
+        <input type="text" class="form-control" id="marca" placeholder="Marca" required />
+      </div><br>
+      <div>
+        <input type="text" class="form-control" id="cor" placeholder="Cor" required />
+      </div><br>
+      <div>
+        <input type="number" class="form-control" id="preco" placeholder="Preço" required/>
+      </div><br>
+      <button type="submit" class="btn btn-primary">Cadastrar</button>
+      <button type="button" class="btn btn-primary" id="btncancel" style="display: none"> Cancelar </button>
+      <p></p>
+      <a href="./index.html">Voltar</a>
+      <p></p>
+      </form>
+
+      <!-- Tabela para mostrar os carros cadastrados -->
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Marca</th>
+            <th>Cor</th>
+            <th>Preço</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="carsTable"></tbody>
+      </table>
+      
+      <script>
+        // Array para armazenar carros do servidor
+        let carros = []
+
+        // ID do carro em edição
+        let carroEdit = null;
+        
+        // Função para exibir os carros na tabela
+        function mostrarCarros(){
+            const tab = document.getElementById("carsTable");
+            tab.innerHTML = "";
+            carros.forEach((carro) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                <td>${carro.id_carro}</td>
+                <td>${carro.nome}</td>
+                <td>${carro.marca}</td>
+                <td>${carro.cor}</td>
+                <td>${carro.preco.toFixed(2)}</td>
+                <td>
+                    <button class="btn btn-primary" onclick="editarCarro(${carro.id_carro})">Editar</button>
+                    <button class="btn btn-danger" onclick="deletarCarro(${carro.id_carro})">Deletar</button>
+                </td>
+                `
+                tab.appendChild(row);
+            });
+        }
+
+        // Função para editar um carro
+        function editarCarro(id_carro) {
+            carroEdit = id_carro;
+            const carro = carros.find((n) => n.id_carro === id_carro);
+            document.getElementById("id_carro").value = carro.id_carro;
+            document.getElementById("nome").value = carro.nome;
+            document.getElementById("marca").value = carro.marca;
+            document.getElementById("cor").value = carro.cor;
+            document.getElementById("preco").value = carro.preco;
+            // Botão de cancelar enquanto edita
+            document.getElementById("btncancel").style.display = "inline-block";
+        }
+
+        // Função para remover carro
+        function deletarCarro(id_carro) {
+          fetch("http://localhost:3000/carros/" + id_carro, {
+            method: "DELETE",
+          }).then(() => {
+              carros = carros.filter((n) => n.id_carro !== id_carro);
+              mostrarCarros();
+            }).catch((error) => console.error("Error:", error));
+        }
+
+        // Envio do formulario
+        document.getElementById("carrosForm").addEventListener("submit", function (event){
+            event.preventDefault();
+
+            // Pega os valores do fomulario
+            const carro = {
+              id_carro: parseInt(document.getElementById("id_carro").value),
+              nome: document.getElementById("nome").value,
+              marca: document.getElementById("marca").value,
+              cor: document.getElementById("cor").value,
+              preco: parseFloat(document.getElementById("preco").value),
+            };
+
+            const idUsado = carros.some((n) => n.id_carro === carro.id_carro);
+
+            if (idUsado && carroEdit === null) {
+              alert("O ID inserido já existe, digite outro");
+              return;
+            }
+
+            if (carroEdit) {
+              // Editando
+              fetch("http://localhost:3000/carros/" + carroEdit, {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(carro),
+              }).then((response) => response.json()).then((data) => {
+                  const index = carros.findIndex((n) => n.id_carro === carroEdit);
+                  carros[index] = data;
+                  mostrarCarros();
+
+                  // Limpa o formulário
+                  document.getElementById("carrosForm").reset();
+                  carroEdit = null;
+                  document.getElementById("btncancel").style.display = "none";
+                }).catch((error) => console.error("Error:", error));
+            } else{
+                // Novo carro
+                console.log("New Carro Data:", carro);
+              fetch("http://localhost:3000/carros", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(carro),
+              }).then((response) => response.json()).then((data) => {
+                  carros.push(carro);
+                  location.reload();
+                  console.log("data:" + JSON.stringify(data, null, 2));
+                  console.log("carro:" + JSON.stringify(carro, null, 2));
+                  console.log("carros:" + JSON.stringify(carros, null, 2));
+                  mostrarCarros();
+                  document.getElementById("carrosForm").reset();
+                  carregarPagina();
+                }).catch((error) => console.error("Error:", error));
+            }
+            mostrarCarros();
+            carregarPagina();
+        });
+
+        // Cancela a edição 
+        document.getElementById("btncancel").addEventListener("click", function () {
+            carroEdit = null;
+            document.getElementById("carrosForm").reset();
+            this.style.display = "none";
+        });
+
+        // Carrega os carros do servidor
+        function carregarPagina() {
+          fetch("http://localhost:3000/carros").then((response) => response.json()).then((data) => {
+              carros = data;
+              mostrarCarros();
+            }).catch((error) => console.error("Error:", error));
+        }
+        carregarPagina();
+
+      </script>
+  </div>
+</body>
+</html>

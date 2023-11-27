@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cadastrar Cliente</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"/>
+    <style>
+      .Clientes {
+        margin: auto;
+        width: 50%;
+        padding: 10px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="Clientes">
+      <h2>Cadastrar cliente</h2>
+      <br>
+
+      <form id="clienteForm">
+        <div>
+          <input type="number" class="form-control" id="id_cliente" placeholder="ID" required />
+        </div><br>
+        <div>
+          <input type="text" class="form-control" id="nome" placeholder="Nome" required />
+        </div><br>
+        <div>
+          <input type="email" class="form-control" id="email" placeholder="Email" required />
+        </div><br>
+        <div>
+          <input type="text" class="form-control" id="endereco" placeholder="Endereço" required />
+        </div><br>
+        <button type="submit" class="btn btn-primary">Cadastrar</button>
+        <button type="button" class="btn btn-primary" id="btncancel" style="display: none">Cancelar</button>
+        <p></p>
+        <a href="./index.html">Voltar</a>
+        <p></p>
+      </form>
+
+      <!-- Tabela para mostrar os clientes cadastrados -->
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Email</th>
+            <th>Endereço</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="clienteTable"></tbody>
+      </table>
+
+      <script>
+        // Array para armazenar clientes do servidor
+        let clientes = [];
+
+        // ID do cliente em edição
+        let clienteEdit = null;
+
+        // Função para exibir os clientes na tabela
+        function mostrarClientes() {
+          const tab = document.getElementById("clienteTable");
+          tab.innerHTML = "";
+          clientes.forEach((cliente) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+        <td>${cliente.id_cliente}</td>
+        <td>${cliente.nome}</td>
+        <td>${cliente.email}</td>
+        <td>${cliente.endereco}</td>
+        <td>
+            <button class="btn btn-primary" onclick="editarCliente(${cliente.id_cliente})">Editar</button>
+            <button class="btn btn-danger" onclick="deletarCliente(${cliente.id_cliente})">Deletar</button>
+        </td>`;
+            tab.appendChild(row);
+          });
+        }
+
+        // Função para editar um cliente
+        function editarCliente(id_cliente) {
+          clienteEdit = id_cliente;
+          const cliente = clientes.find((n) => n.id_cliente === id_cliente);
+          document.getElementById("id_cliente").value = cliente.id_cliente;
+          document.getElementById("nome").value = cliente.nome;
+          document.getElementById("email").value = cliente.email;
+          document.getElementById("endereco").value = cliente.endereco;
+          // Botão de cancelar enquanto edita
+          document.getElementById("btncancel").style.display = "inline-block";
+        }
+
+        // Função para remover cliente
+        function deletarCliente(id_cliente) {
+          fetch("http://localhost:3000/clientes/" + id_cliente, {
+            method: "DELETE",
+          }).then(() => {
+              clientes = clientes.filter((n) => n.id_cliente !== id_cliente);
+              mostrarClientes();
+            }).catch((error) => console.error("Error:", error));
+        }
+
+        // Envio do formulario
+        document.getElementById("clienteForm").addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            // Pega os valores do fomulario    
+            const cliente = {
+              id_cliente: parseInt(document.getElementById("id_cliente").value),
+              nome: document.getElementById("nome").value,
+              email: document.getElementById("email").value,
+              endereco: document.getElementById("endereco").value,
+            };
+
+            const idUsado = clientes.some((n) => n.id_cliente === cliente.id_cliente);
+            if (idUsado && clienteEdit === null) {
+              alert("O ID inserido já existe, digite outro");
+              return;
+            }
+
+            if (clienteEdit) {
+              // Editando
+              fetch("http://localhost:3000/clientes/" + clienteEdit, {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(cliente),
+              }).then((response) => response.json()).then((data) => {
+                  const index = clientes.findIndex((n) => n.id_cliente === clienteEdit);
+                  clientes[index] = data;
+                  mostrarClientes();
+                  // Limpa o formulário
+                  document.getElementById("clienteForm").reset();
+                  clienteEdit = null;
+                  document.getElementById("btncancel").style.display = "none";
+                })
+                .catch((error) => console.error("Error:", error));
+            } else {
+              // Novo cliente
+              console.log("New Cliente Data:", cliente);
+              fetch("http://localhost:3000/clientes", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(cliente),
+              }).then((response) => response.json()).then((data) => {
+                  clientes.push(cliente);
+                  location.reload();
+                  console.log("data:" + JSON.stringify(data, null, 2));
+                  console.log("cliente:" + JSON.stringify(cliente, null, 2));
+                  console.log("clientes:" + JSON.stringify(clientes, null, 2));
+                  mostrarClientes();
+                  document.getElementById("clienteForm").reset();
+                  carregarPagina();
+                }).catch((error) => console.error("Error:", error));
+            }
+            mostrarClientes();
+            carregarPagina();
+          });
+
+        // Cancela a edição
+        document.getElementById("btncancel").addEventListener("click", function () {
+            clienteEdit = null;
+            document.getElementById("clienteForm").reset();
+            this.style.display = "none";
+          });
+
+        // Carrega os clientes do servidor        
+        function carregarPagina() {
+          fetch("http://localhost:3000/clientes").then((response) => response.json()).then((data) => {
+              clientes = data;
+              mostrarClientes();
+            }).catch((error) => console.error("Error:", error));
+        }
+        carregarPagina();
+      </script>
+    </div>
+  </body>
+</html>
